@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PNGRB B.1 — Hydrogen Blending Pipeline Screening Tool</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface-1:#fcfcfb; --plane:#f2f2ee; --card:#ffffff;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --accent:#2a78d6; --accent-soft:#cde2fb;
+  --shadow:0 1px 2px rgba(11,11,11,.05), 0 4px 14px rgba(11,11,11,.05);
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --surface-1:#1a1a19; --plane:#0d0d0d; --card:#1f1f1e;
+  --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --accent:#3987e5; --accent-soft:#184f95;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--plane); color:var(--text-primary);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:14px; line-height:1.5;
+}
+header.top{
+  background:var(--surface-1); border-bottom:1px solid var(--border);
+  padding:14px 22px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  position:sticky; top:0; z-index:50;
+}
+header.top h1{font-size:16px; margin:0; font-weight:650; letter-spacing:-.01em}
+header.top .sub{font-size:12px; color:var(--text-secondary); margin-top:2px}
+.spacer{flex:1}
+button, select, input{font-family:inherit; font-size:13px}
+.btn{
+  background:var(--card); color:var(--text-primary); border:1px solid var(--border);
+  border-radius:7px; padding:7px 12px; cursor:pointer; transition:.12s;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn.primary{background:var(--accent); color:#fff; border-color:var(--accent)}
+.btn.primary:hover{opacity:.9; color:#fff}
+.btn.sm{padding:4px 9px; font-size:12px; border-radius:6px}
+
+.wrap{display:grid; grid-template-columns:minmax(0,1fr) 440px; gap:20px; padding:20px; align-items:start; max-width:1560px; margin:0 auto}
+@media (max-width:1180px){ .wrap{grid-template-columns:1fr} .results{position:static !important} }
+
+.card{
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  margin-bottom:14px; box-shadow:var(--shadow); overflow:hidden;
+}
+.card > .head{
+  display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer;
+  border-bottom:1px solid transparent;
+}
+.card.open > .head{border-bottom-color:var(--border)}
+.card .head .num{
+  width:24px; height:24px; border-radius:6px; background:var(--accent-soft); color:var(--accent);
+  display:grid; place-items:center; font-size:12px; font-weight:700; flex:none;
+}
+:root[data-theme="dark"] .card .head .num{color:#fff}
+.card .head h2{font-size:14px; margin:0; font-weight:620; flex:1}
+.card .head .wt{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; background:var(--plane); padding:2px 7px; border-radius:20px; border:1px solid var(--border)}
+.card .head .mini{font-size:12px; font-variant-numeric:tabular-nums; font-weight:650; min-width:34px; text-align:right}
+.card .head .chev{color:var(--muted); font-size:11px; transition:.15s; transform:rotate(-90deg)}
+.card.open .head .chev{transform:rotate(0)}
+.card .body{display:none; padding:14px 16px 16px}
+.card.open .body{display:block}
+.note{font-size:12px; color:var(--text-secondary); margin:0 0 12px; padding-left:10px; border-left:2px solid var(--grid)}
+
+.field{margin-bottom:11px}
+.field label{display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px; font-weight:520}
+.field .hint{font-size:11px; color:var(--muted); margin-top:3px}
+input[type=number], input[type=text], select{
+  width:100%; padding:7px 9px; border:1px solid var(--border); border-radius:7px;
+  background:var(--surface-1); color:var(--text-primary);
+}
+input:focus, select:focus{outline:2px solid var(--accent); outline-offset:-1px}
+.row{display:grid; gap:10px}
+.row.c2{grid-template-columns:1fr 1fr}
+.row.c3{grid-template-columns:1fr 1fr 1fr}
+.row.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+@media(max-width:640px){.row.c2,.row.c3,.row.c4{grid-template-columns:1fr}}
+
+.seg{display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; margin-bottom:10px}
+.seg button{background:var(--surface-1); border:0; padding:6px 12px; cursor:pointer; color:var(--text-secondary); font-size:12px}
+.seg button.on{background:var(--accent); color:#fff}
+
+.itemlist{display:flex; flex-direction:column; gap:8px; margin-bottom:8px}
+.item{
+  display:grid; grid-template-columns:1.2fr 1.3fr 1fr 46px 30px; gap:8px; align-items:center;
+  background:var(--surface-1); border:1px solid var(--border); border-radius:9px; padding:8px;
+}
+.item.eu{grid-template-columns:1.6fr 1.4fr 46px 30px}
+@media(max-width:780px){ .item, .item.eu{grid-template-columns:1fr 1fr; } }
+.item .sc{font-variant-numeric:tabular-nums; font-weight:700; text-align:center; font-size:13px; border-radius:6px; padding:4px 0}
+.del{background:none; border:0; color:var(--muted); cursor:pointer; font-size:15px; padding:2px}
+.del:hover{color:var(--critical)}
+
+/* sub-score readout */
+.sub{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary); margin-top:2px}
+.pill{font-variant-numeric:tabular-nums; font-weight:700; padding:1px 7px; border-radius:5px; font-size:12px}
+.p5{background:rgba(12,163,12,.14); color:var(--good)}
+.p4{background:rgba(12,163,12,.10); color:var(--good)}
+.p3{background:rgba(250,178,25,.18); color:#8a6100}
+:root[data-theme="dark"] .p3{color:var(--warning)}
+.p2{background:rgba(236,131,90,.18); color:#a8482a}
+:root[data-theme="dark"] .p2{color:var(--serious)}
+.p1{background:rgba(208,59,59,.15); color:var(--critical)}
+.p0{background:var(--plane); color:var(--muted)}
+
+/* ---- results ---- */
+.results{position:sticky; top:82px}
+.verdict{
+  border-radius:12px; padding:16px 18px; color:#fff; margin-bottom:14px; box-shadow:var(--shadow);
+}
+.verdict .vlabel{font-size:11px; text-transform:uppercase; letter-spacing:.09em; opacity:.9}
+.verdict .vmain{font-size:20px; font-weight:700; margin:4px 0 2px; letter-spacing:-.01em; display:flex; align-items:center; gap:9px}
+.verdict .vsub{font-size:13px; opacity:.95}
+.verdict.v-excellent{background:#0ca30c}
+.verdict.v-good{background:#178a4c}
+.verdict.v-fair{background:#b07800}
+.verdict.v-marginal{background:#c2622f}
+.verdict.v-poor{background:#c03535}
+.verdict.v-gate{background:#a02b2b}
+.verdict.v-idle{background:#6b6a66}
+
+.scorebox{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px}
+.stat{background:var(--card); border:1px solid var(--border); border-radius:11px; padding:12px 14px; box-shadow:var(--shadow)}
+.stat .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em}
+.stat .v{font-size:26px; font-weight:700; letter-spacing:-.02em; margin-top:2px; line-height:1.15}
+.stat .v small{font-size:13px; font-weight:500; color:var(--muted)}
+.stat .d{font-size:11.5px; color:var(--text-secondary); margin-top:2px}
+
+table.bd{width:100%; border-collapse:collapse; font-size:12.5px}
+table.bd th{
+  text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--muted); font-weight:600; padding:0 6px 6px; border-bottom:1px solid var(--grid);
+}
+table.bd th.n, table.bd td.n{text-align:right; font-variant-numeric:tabular-nums}
+table.bd td{padding:7px 6px; border-bottom:1px solid var(--grid); vertical-align:middle}
+table.bd tr:last-child td{border-bottom:0}
+.meter{height:7px; background:var(--plane); border-radius:4px; overflow:hidden; min-width:60px; border:1px solid var(--border)}
+.meter i{display:block; height:100%; border-radius:4px}
+.gatebad{color:var(--critical); font-weight:700}
+.gateok{color:var(--good); font-weight:700}
+
+.flaglist{list-style:none; margin:0; padding:0; font-size:12.5px}
+.flaglist li{display:flex; gap:8px; padding:7px 0; border-bottom:1px solid var(--grid); align-items:flex-start}
+.flaglist li:last-child{border-bottom:0}
+.flaglist .ic{flex:none; font-weight:700; width:14px; text-align:center}
+.ic.bad{color:var(--critical)} .ic.warn{color:#8a6100} .ic.ok{color:var(--good)}
+:root[data-theme="dark"] .ic.warn{color:var(--warning)}
+
+.panel{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:14px; box-shadow:var(--shadow)}
+.panel h3{font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin:0 0 10px; font-weight:640}
+
+details.ref{background:var(--card); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; box-shadow:var(--shadow)}
+details.ref > summary{padding:12px 16px; cursor:pointer; font-weight:620; font-size:13.5px; list-style:none; display:flex; align-items:center; gap:8px}
+details.ref > summary::-webkit-details-marker{display:none}
+details.ref > summary::before{content:"▸"; color:var(--muted); font-size:11px}
+details.ref[open] > summary::before{content:"▾"}
+details.ref .rbody{padding:0 16px 16px; font-size:12.5px}
+table.ref{width:100%; border-collapse:collapse; font-size:12px; margin:6px 0 14px}
+table.ref th{background:var(--plane); text-align:left; padding:6px 8px; font-weight:620; border:1px solid var(--border)}
+table.ref td{padding:5px 8px; border:1px solid var(--border)}
+table.ref td.n{text-align:center; font-variant-numeric:tabular-nums; font-weight:650}
+h4.rt{font-size:12.5px; margin:12px 0 4px; font-weight:650}
+code{background:var(--plane); padding:1px 5px; border-radius:4px; font-size:11.5px}
+
+.foot{padding:6px 22px 30px; font-size:11.5px; color:var(--muted); max-width:1560px; margin:0 auto}
+.legend{display:flex; gap:14px; flex-wrap:wrap; font-size:11.5px; color:var(--text-secondary); margin-top:8px}
+.legend span{display:flex; align-items:center; gap:5px}
+.sw{width:10px; height:10px; border-radius:3px; display:inline-block}
+
+@media print{
+  header.top, .seg, .del, .btn, .card .head .chev, details.ref{display:none !important}
+  body{background:#fff}
+  .wrap{grid-template-columns:1fr; padding:0}
+  .card .body{display:block !important}
+  .results{position:static}
+  .card, .panel, .stat{box-shadow:none; break-inside:avoid}
+  .verdict{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>Hydrogen Blending Pipeline Screening Tool</h1>
+    <div class="sub">PNGRB Roadmap for Hydrogen Transportation through Pipelines &amp; Blending with Natural Gas (Sept 2025) — Module B.1, 9-Parameter Screening Methodology</div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn sm" onclick="loadExample()">Load example</button>
+  <button class="btn sm" onclick="resetAll()">Reset</button>
+  <button class="btn sm" onclick="saveJSON()">Save inputs</button>
+  <button class="btn sm" onclick="document.getElementById('fileIn').click()">Load inputs</button>
+  <input type="file" id="fileIn" accept=".json" style="display:none" onchange="loadJSON(event)">
+  <button class="btn sm" onclick="exportCSV()">Export CSV</button>
+  <button class="btn sm primary" onclick="window.print()">Print report</button>
+  <button class="btn sm" onclick="toggleTheme()" id="themeBtn">Dark</button>
+</header>
+
+<div class="wrap">
+<!-- ============ LEFT: INPUTS ============ -->
+<div class="inputs">
+
+  <div class="card open">
+    <div class="head" onclick="tog(this)"><div class="num">ID</div><h2>Segment identification</h2><span class="chev">▾</span></div>
+    <div class="body">
+      <div class="row c3">
+        <div class="field"><label>Operator / entity</label><input type="text" id="op" placeholder="e.g. GAIL / GSPC"></div>
+        <div class="field"><label>Pipeline / network name</label><input type="text" id="plname" placeholder="e.g. Dahej–Vijaipur"></div>
+        <div class="field"><label>Section ID</label><input type="text" id="secid" placeholder="e.g. SEC-014"></div>
+      </div>
+      <div class="row c4">
+        <div class="field"><label>Chainage from (km)</label><input type="number" id="chFrom" step="0.01" placeholder="0.00"></div>
+        <div class="field"><label>Chainage to (km)</label><input type="number" id="chTo" step="0.01" placeholder="5.00"></div>
+        <div class="field"><label>Nominal size (inch)</label><input type="number" id="dia" step="0.5" placeholder="12"></div>
+        <div class="field"><label>System type</label>
+          <select id="systype"><option value="NGPL">NGPL — Transmission [T]</option><option value="CGD">CGD — Distribution</option></select>
+        </div>
+      </div>
+      <p class="note">B.1 scores segments divided into <strong>1–5 km sections</strong>. Assess one section at a time; use Export CSV to build the registry.</p>
+    </div>
+  </div>
+
+  <!-- 1 MATERIAL -->
+  <div class="card open" id="c-mat">
+    <div class="head" onclick="tog(this)"><div class="num">1</div><h2>Material Compatibility</h2><span class="wt">14%</span><span class="mini" id="m-mat">—</span><span class="chev">▾</span></div>
+    <div class="body">
+      <p class="note">Resistance to hydrogen embrittlement / permeation. Lower-grade carbon steels (X42–X52) and PE100 score best. <em>Tables 4 &amp; 5.</em></p>
+      <div class="seg" id="seg-mat">
+        <button data-v="steel" class="on" onclick="segSet('mat',this)">Steel only</button>
+        <button data-v="pe" onclick="segSet('mat',this)">PE only</button>
+        <button data-v="both" onclick="segSet('mat',this)">Steel + PE (min)</button>
+      </div>
+      <div class="row c2">
+        <div class="field" id="f-steel"><label>Steel grade (API 5L)</label>
+          <select id="steelGrade" onchange="calc()">
+            <option value="">— select —</option>
+            <option value="GRB">API 5L Gr. B</option>
+            <option value="X42">API 5L X42–X52 (below X52)</option>
+            <option value="X52">API 5L X52–X60</option>
+            <option value="X60">API 5L X60–X70</option>
+            <option value="X70">API 5L X70–X80</option>
+            <option value="X80">API 5L X80 and higher</option>
+          </select>
+          <div class="hint" id="steelHint"></div>
+        </div>
+        <div class="field" id="f-pe" style="display:none"><label>PE grade</label>
+          <select id="peGrade" onchange="calc()">
+            <option value="">— select —</option>
+            <option value="PE100">PE100</option>
+            <option value="PE80">PE80</option>
+            <option value="PE63">PE63</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 WELD -->
+  <div class="card open" id="c-weld">
+    <div class="head" onclick="tog(this)"><div class="num">2</div><h2>Weld Integrity</h2><span class="wt">14%</span><span class="mini" id="m-weld">—</span><span class="chev">▾</span></div>
+    <div class="body">
+      <p class="note">Girth welds are the critical locus for hydrogen-induced cracking. Primary route uses Vickers hardness (HV) + PAUT flaw density. <em>Tables 6 &amp; 7; alternate route per Matrices A &amp; B.</em></p>
+      <div class="seg" id="seg-weld">
+        <button data-v="primary" class="on" onclick="segSet('weld',this)">Primary (HV + PAUT)</button>
+        <button data-v="alt" onclick="segSet('weld',this)">Alternate (no weld traceability)</button>
+      </div>
+      <div id="weld-primary">
+        <div class="row c2">
+          <div class="field"><label>Max weld hardness (HV)</label><input type="number" id="hv" step="1" placeholder="e.g. 215" oninput="calc()"><div class="sub" id="s-hv"></div></div>
+          <div class="field"><label>Weld flaw density (%)</label><input type="number" id="flaw" step="0.1" placeholder="e.g. 1.5" oninput="calc()"><div class="sub" id="s-flaw"></div></div>
+        </div>
+      </div>
+      <div id="weld-alt" style="display:none">
+        <div class="row c2">
+          <div class="field"><label>Acceptance code compliance</label>
+            <select id="accCode" onchange="calc()">
+              <option value="">— select —</option>
+              <option value="5">Fully compliant with ASME/API standards</option>
+              <option value="4">Minor deviations, documented repairs</option>
+              <option value="3">Compliant with legacy codes, no recent validation</option>
+              <option value="2">Partial compliance, limited documentation</option>
+              <option value="1">Non-compliant or undocumented</option>
+            </select>
+          </div>
+          <div class="field"><label>Defect rate in sampled welds (%)</label><input type="number" id="ndt" step="0.1" placeholder="e.g. 1.8" oninput="calc()"><div class="sub" id="s-ndt"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 COMPONENT -->
+  <div class="card open" id="c-comp">
+    <div class="head" onclick="tog(this)"><div class="num">3</div><h2>Component Readiness</h2><span class="wt">12%</span><span class="mini" id="m-comp">—</span><span class="chev">▾</span></div>
+    <div class="body">
+      <p class="note">Score is the <strong>minimum</strong> of all individual valve and compressor scores — the least compatible element limits overall readiness. <em>Tables 8–11.</em></p>
+      <h4 class="rt">Valves</h4>
+      <div class="itemlist" id="valveList"></div>
+      <button class="btn sm" onclick="addValve()">+ Add valve</button>
+      <h4 class="rt" style="margin-top:16px">Compressors / stations</h4>
+      <div class="itemlist" id="compList"></div>
+      <button class="btn sm" onclick="addComp()">+ Add compressor</button>
+      <div class="hint" style="margin-top:8px">Compressor blend rating must be the <strong>OEM-approved</strong> H₂ blend limit. Leave the compressor list empty for CGD zones with no compression on the segment.</div>
+    </div>
+  </div>
+
+  <!-- 4 END USE -->
+  <div class="card open" id="c-eu">
+    <div class="head" onclick="tog(this)"><div class="num">4</div><h2>End-Use Compatibility</h2><span class="wt">12%</span><span class="mini" id="m-eu">—</span><span class="chev">▾</span></div>
+    <div class="body">
+      <p class="note">Score is the <strong>minimum</strong> across all downstream equipment — the least tolerant device sets the system limit. <em>Table 12.</em></p>
+      <div class="itemlist" id="euList"></div>
+      <button class="btn sm" onclick="addEU()">+ Add end user / equipment</button>
+    </div>
+  </div>
+
+  <!-- 5 AGE -->
+  <div class="card open" id="c-age">
+    <div class="head" onclick="tog(this)"><div class="num">5</div><h2>Age of Pipeline</h2><span class="wt">12%</span><span class="mini" id="m-age">—</span><span class="chev">▾</span></div>
+    <div class="body">
+      <p class="note">Proxy for fatigue, corrosion and outdated specification. <em>Table 13.</em></p>
+      <div class="row c2">
+        <div class="field"><label>Age in service (years)</label><input type="number" id="age" step="0.5" placeholder="e.g. 8" oninput="calc()"></div>
+        <div class="field"><label>Commissioning year (optional)</label><input type="number" id="commYr" step="1" placeholder="e.g. 2016" oninput="fromYear()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 GAS LOSS -->
+  <div class="card open" id="c-loss">
+    <div class="head" onclick="tog(this)"><div class="num">6</div><h2>Gas Losses</h2><span class="wt">10%</span><span class="mini" id="m-loss">—</span><span class="chev">▾</span></div>
+    <div class="body">
+      <p class="note">Hydrogen's small molecular size and high diffusivity amplify existing leakage paths. <em>Table 14.</em></p>
+      <div class="field" style="max-width:280px"><label>Unaccounted for gas / gas loss (%)</label><input type="number" id="loss" step="0.01" placeholder="e.g. 0.35" oninput="calc()"><div class="sub" id="s-loss"></div></div>
+    </div>
+  </div>
+
+  <!-- 7 CLASS LOCATION -->
+  <div class="card open" id="c-loc">
+    <div class="head" onclick="tog(this)"><div class="num">7</div><h2>Class of Location</h2><span class="wt">10%</span><span class="mini" id="m-loc">—</span><span class="chev">▾</span></div>
+    <div class="body">
+      <p class="note">Length-weighted average across the section: <code>(L1×5 + L2×3 + L3×2 + L4×1) ÷ ΣL</code>. <em>Table 15.</em></p>
+      <div class="row c4">
+        <div class="field"><label>Class 1 length (km)</label><input type="number" id="L1" step="0.01" placeholder="0" oninput="calc()"><div class="hint">Rural, very low density — score 5</div></div>
+        <div class="field"><label>Class 2 length (km)</label><input type="number" id="L2" step="0.01" placeholder="0" oninput="calc()"><div class="hint">Suburban — score 3</div></div>
+        <div class="field"><label>Class 3 length (km)</label><input type="number" id="L3" step="0.01" placeholder="0" oninput="calc()"><div class="hint">Urban, high density — score 2</div></div>
+        <div class="field"><label>Class 4 length (km)</label><input type="number" id="L4" step="0.01" placeholder="0" oninput="calc()"><div class="hint">HCA / critical infra — score 1</div></div>
+      </div>
+      <div class="sub" id="s-loc"></div>
+    </div>
+  </div>
+
+  <!-- 8 CORROSION -->
+  <div class="card open" id="c-corr">
+    <div class="head" onclick="tog(this)"><div class="num">8</div><h2>Corrosion</h2><span class="wt">8%</span><span class="mini" id="m-corr">—</span><span class="chev">▾</span></div>
+    <div class="body">
+      <p class="note">Two equally weighted sub-parameters: corrosion rate and residual thickness ratio (from ILI / DCVG / UT data). <em>Tables 16 &amp; 17.</em></p>
+      <div class="row c2">
+        <div class="field"><label>Corrosion rate (mm/year)</label><input type="number" id="corrRate" step="0.01" placeholder="e.g. 0.15" oninput="calc()"><div class="sub" id="s-cr"></div></div>
+        <div class="field"><label>Residual thickness ratio (t<sub>remaining</sub> / t<sub>nominal</sub>)</label><input type="number" id="rtr" step="0.01" placeholder="e.g. 0.96" oninput="calc()"><div class="sub" id="s-rtr"></div></div>
+      </div>
+      <div class="hint">Scoring assumes uniform (general) wall loss. Assess pitting and crack-like features separately where ILI data supports it.</div>
+    </div>
+  </div>
+
+  <!-- 9 CAPACITY -->
+  <div class="card open" id="c-cap">
+    <div class="head" onclick="tog(this)"><div class="num">9</div><h2>Capacity Utilisation &amp; MAOP</h2><span class="wt">8%</span><span class="mini" id="m-cap">—</span><span class="chev">▾</span></div>
+    <div class="body">
+      <p class="note">Two equally weighted sub-parameters: reserve throughput capacity and pressure buffer below MAOP. <em>Table 18.</em></p>
+      <div class="row c2">
+        <div class="field"><label>Capacity utilisation (%)</label><input type="number" id="cap" step="0.1" placeholder="e.g. 88" oninput="calc()"><div class="sub" id="s-cap"></div></div>
+        <div class="field"><label>Operating pressure as % of MAOP</label><input type="number" id="opm" step="0.1" placeholder="e.g. 62" oninput="calc()"><div class="sub" id="s-opm"></div></div>
+      </div>
+      <div class="row c3" style="margin-top:2px">
+        <div class="field"><label>MAOP (bar) — optional</label><input type="number" id="maop" step="0.1" placeholder="e.g. 92" oninput="fromPressure()"></div>
+        <div class="field"><label>Operating pressure (bar) — optional</label><input type="number" id="oppr" step="0.1" placeholder="e.g. 57" oninput="fromPressure()"></div>
+        <div class="field"></div>
+      </div>
+    </div>
+  </div>
+
+  <details class="ref">
+    <summary>Reference scoring tables (as per PNGRB B.1)</summary>
+    <div class="rbody" id="refTables"></div>
+  </details>
+
+  <details class="ref">
+    <summary>Engineering interpretations applied in this tool</summary>
+    <div class="rbody">
+      <p>The report leaves five points to engineering judgement. This tool resolves them as follows — change them in the source if your assessment basis differs.</p>
+      <ol style="padding-left:18px; margin:8px 0">
+        <li><strong>Weld integrity, primary route.</strong> The report gives an explicit combination formula only for the alternate route (0.5/0.5). The primary route (hardness + flaw density) is combined here with the same equal weighting: <code>0.5 × hardness score + 0.5 × flaw density score</code>.</li>
+        <li><strong>Per-component score.</strong> A valve is scored <code>min(body material, age)</code> and a compressor <code>min(OEM blend limit, age)</code>, before the overall minimum is taken across all items — consistent with the module's stated principle that the least compatible element limits overall readiness. (An averaging basis would raise scores; it is the less conservative reading.)</li>
+        <li><strong>Corrosion rate units.</strong> Table 16 prints its bands with a "%" symbol while the parameter description defines corrosion in mm/year. The bands are applied here as <strong>mm/year</strong>, per the description.</li>
+        <li><strong>Open-ended bands.</strong> Corrosion rate below 0.1 mm/yr and capacity utilisation below 87% fall outside the tabulated ranges; both are treated as the best band (score 5).</li>
+        <li><strong>Band endpoints.</strong> Several tables share an endpoint between adjacent bands (e.g. Table 13 lists both "&lt;10" and "10–20"; Table 18 lists both "87–90" and "90–93"). At a shared endpoint the tool assigns the <strong>lower, more conservative</strong> score — so 10 years scores 4, not 5, and 90% utilisation scores 4, not 5. Tables with explicitly disjoint bands (6, 7, 10, 12) are applied exactly as printed.</li>
+        <li><strong>API 5L Gr. B.</strong> Not listed in Table 4. On the toughness/yield-strength logic of that table it scores 5, and it is scored 5 here — but flagged, because the preliminary screening in Table 22 marks Gr. B as not compatible, most likely on vintage and documentation grounds rather than strength. Confirm against the actual mill certificates before relying on it.</li>
+      </ol>
+    </div>
+  </details>
+</div>
+
+<!-- ============ RIGHT: RESULTS ============ -->
+<div class="results">
+  <div class="verdict v-idle" id="verdict">
+    <div class="vlabel">Screening verdict</div>
+    <div class="vmain" id="vMain">Awaiting input</div>
+    <div class="vsub" id="vSub">Complete all nine parameters to produce a verdict.</div>
+  </div>
+
+  <div class="scorebox">
+    <div class="stat">
+      <div class="k">Total pipeline score</div>
+      <div class="v" id="totalScore">—<small> / 5.00</small></div>
+      <div class="d" id="ratingTxt">weighted, 9 parameters</div>
+    </div>
+    <div class="stat">
+      <div class="k">Minimum-score gate</div>
+      <div class="v" id="gateVal">—</div>
+      <div class="d" id="gateTxt">every parameter must be ≥ 4.00</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Parameter breakdown</h3>
+    <table class="bd">
+      <thead><tr><th>Parameter</th><th class="n">Score</th><th style="width:70px">Level</th><th class="n">Wt</th><th class="n">Contrib.</th><th class="n">Gate</th></tr></thead>
+      <tbody id="bdBody"></tbody>
+      <tfoot><tr><td colspan="4" style="padding-top:8px; font-weight:650">Total</td><td class="n" id="bdTotal" style="padding-top:8px; font-weight:700">—</td><td></td></tr></tfoot>
+    </table>
+    <div class="legend">
+      <span><i class="sw" style="background:#0ca30c"></i>5.0–4.5</span>
+      <span><i class="sw" style="background:#178a4c"></i>4.5–4.0</span>
+      <span><i class="sw" style="background:#fab219"></i>4.0–3.0</span>
+      <span><i class="sw" style="background:#ec835a"></i>3.0–2.0</span>
+      <span><i class="sw" style="background:#d03b3b"></i>&lt; 2.0</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Findings — why this outcome</h3>
+    <ul class="flaglist" id="reasons"><li><span class="ic">·</span><span>Enter segment data to generate findings.</span></li></ul>
+  </div>
+
+  <div class="panel">
+    <h3>Red flags (B.1 snapshot check)</h3>
+    <ul class="flaglist" id="redflags"></ul>
+  </div>
+
+  <div class="panel">
+    <h3>Governing blend limit &amp; required actions</h3>
+    <div id="actions" style="font-size:12.5px"></div>
+  </div>
+</div>
+</div>
+
+<div class="foot">
+  Implements the 9-parameter screening methodology of Module B.1 (Pipeline Identification), <em>Roadmap for Hydrogen Transportation through Pipelines and Blending with Natural Gas</em>, PNGRB / ICF Consulting India, September 2025 — Tables 4–20, pp. 22–32.
+  Screening output only: it prioritises candidates for pilot consideration and does not replace a fitness-for-service assessment, a hydrogen-specific fracture-control plan, or the acceptance requirements of Module B.2.
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   SCORING ENGINE — PNGRB Module B.1
+   ============================================================ */
+
+const WEIGHTS = {
+  mat:0.14, weld:0.14, comp:0.12, eu:0.12, age:0.12,
+  loss:0.10, loc:0.10, corr:0.08, cap:0.08
+};
+const PNAMES = {
+  mat:"Material Compatibility", weld:"Weld Integrity", comp:"Component Readiness",
+  eu:"End-Use Compatibility", age:"Age of Pipeline", loss:"Gas Losses",
+  loc:"Class of Location", corr:"Corrosion", cap:"Capacity Utilisation & MAOP"
+};
+const GATE = 4.0;
+
+// Table 4 — steel grade
+const STEEL = {GRB:5, X42:5, X52:4, X60:3, X70:2, X80:1};
+const STEEL_LBL = {GRB:"API 5L Gr. B", X42:"API 5L X42–X52", X52:"API 5L X52–X60",
+                   X60:"API 5L X60–X70", X70:"API 5L X70–X80", X80:"API 5L X80+"};
+// Table 5 — PE grade
+const PE = {PE100:5, PE80:4, PE63:2};
+
+/* Banded lookup.
+   Each entry is [limit, score, strict]:  strict=true → matches when v <  limit
+                                          strict=false→ matches when v <= limit
+   Where the source tables share an endpoint between two bands (e.g. "<10" and
+   "10–20"), the boundary value is assigned the LOWER, more conservative score. */
+function band(v, bands){
+  if(v===null||v===undefined||isNaN(v)) return null;
+  for(const [lim,sc,strict] of bands){ if(strict ? v<lim : v<=lim) return sc; }
+  return bands[bands.length-1][1];
+}
+const T=true, F=false;
+const HV_B     = [[200,5,F],[230,4,F],[250,3,F],[280,2,F],[Infinity,1,F]];        // Table 6  (explicit integer bands)
+const FLAW_B   = [[1,5,F],[2,4,F],[3,3,F],[5,2,F],[Infinity,1,F]];                // Table 7  (≤1, >1–2, …)
+const NDT_B    = [[1,5,F],[2,4,F],[3,3,F],[5,2,F],[Infinity,1,F]];                // Matrix B
+const VAGE_B   = [[5,5,T],[10,4,T],[15,3,T],[20,2,F],[Infinity,1,F]];             // Tables 9 / 11
+const BLEND_B  = [[2,1,F],[5,2,F],[10,3,F],[15,4,F],[Infinity,5,F]];              // Table 10 (compressor OEM limit)
+const EU_B     = [[1,1,F],[3,2,F],[5,3,F],[10,4,F],[Infinity,5,F]];               // Table 12 ("up to" = inclusive)
+const AGE_B    = [[10,5,T],[20,4,T],[30,3,T],[40,2,F],[Infinity,1,F]];            // Table 13
+const LOSS_B   = [[0.1,5,T],[0.4,4,T],[0.6,3,T],[1,2,F],[Infinity,1,F]];          // Table 14
+const CORR_B   = [[0.2,5,T],[0.4,4,T],[0.6,3,T],[1,2,F],[Infinity,1,F]];          // Table 16 (mm/yr)
+const CAP_B    = [[90,5,T],[93,4,T],[96.5,3,T],[98.5,2,F],[Infinity,1,F]];        // Table 18a
+const OPM_B    = [[30,5,T],[50,4,T],[70,3,T],[90,2,F],[Infinity,1,F]];            // Table 18b
+const VBODY    = {ss316:5, duplex:3, carbon:1};                                   // Table 8
+const VBODY_LBL= {ss316:"Austenitic SS (316L)", duplex:"Duplex SS", carbon:"Carbon steel / Al alloy"};
+// Table 17 — residual thickness ratio (descending bands, conservative at endpoints)
+function rtrScore(v){
+  if(v===null||v===undefined||isNaN(v)) return null;
+  if(v>0.95) return 5;
+  if(v>0.90) return 4;
+  if(v>0.80) return 3;
+  if(v>=0.70) return 2;
+  return 1;
+}
+// Table 20 — evaluation
+function rating(total){
+  if(total>=4.50) return {key:"excellent", label:"Excellent", action:"Blending without retro-fitment may be possible."};
+  if(total>=4.40) return {key:"good",      label:"Good",      action:"Blending possible with minor retro-fitment."};
+  if(total>=4.20) return {key:"fair",      label:"Fair",      action:"Moderate retro-fitment required before blending."};
+  if(total>=4.00) return {key:"marginal",  label:"Marginal",  action:"Extensive mitigation required before blending."};
+  return {key:"poor", label:"Poor", action:"Rejection for blending."};
+}
+
+/* ---------- input helpers ---------- */
+const $  = id => document.getElementById(id);
+const num = id => { const v = $(id).value.trim(); return v==="" ? null : parseFloat(v); };
+const modes = {mat:"steel", weld:"primary"};
+
+function segSet(group, btn){
+  modes[group] = btn.dataset.v;
+  btn.parentElement.querySelectorAll("button").forEach(b=>b.classList.toggle("on", b===btn));
+  if(group==="mat"){
+    $("f-steel").style.display = (modes.mat==="pe") ? "none" : "";
+    $("f-pe").style.display    = (modes.mat==="steel") ? "none" : "";
+  }
+  if(group==="weld"){
+    $("weld-primary").style.display = modes.weld==="primary" ? "" : "none";
+    $("weld-alt").style.display     = modes.weld==="alt" ? "" : "none";
+  }
+  calc();
+}
+function tog(h){ h.parentElement.classList.toggle("open"); }
+function fromYear(){
+  const y = num("commYr");
+  if(y && y>1900 && y<2200){ $("age").value = (new Date().getFullYear() - y); }
+  calc();
+}
+function fromPressure(){
+  const m = num("maop"), o = num("oppr");
+  if(m && o && m>0){ $("opm").value = (100*o/m).toFixed(1); }
+  calc();
+}
+
+/* ---------- dynamic item lists ---------- */
+let vSeq=0, cSeq=0, eSeq=0;
+function addValve(d){
+  d = d||{};
+  const id = "v"+(vSeq++);
+  const el = document.createElement("div");
+  el.className="item"; el.id=id;
+  el.innerHTML = `
+    <input type="text" placeholder="Valve tag" value="${d.tag||""}" data-f="tag">
+    <select data-f="body" onchange="calc()">
+      <option value="">— body material —</option>
+      <option value="ss316" ${d.body==="ss316"?"selected":""}>Austenitic SS (316L)</option>
+      <option value="duplex" ${d.body==="duplex"?"selected":""}>Duplex SS</option>
+      <option value="carbon" ${d.body==="carbon"?"selected":""}>Carbon steel / Al alloy</option>
+    </select>
+    <input type="number" placeholder="Age (yr)" value="${d.age??""}" data-f="age" oninput="calc()">
+    <div class="sc p0" data-f="score">—</div>
+    <button class="del" onclick="this.parentElement.remove();calc()" title="Remove">×</button>`;
+  $("valveList").appendChild(el); calc();
+}
+function addComp(d){
+  d = d||{};
+  const el = document.createElement("div");
+  el.className="item";
+  el.innerHTML = `
+    <input type="text" placeholder="Compressor tag" value="${d.tag||""}" data-f="tag">
+    <input type="number" placeholder="OEM blend limit (%)" value="${d.blend??""}" data-f="blend" oninput="calc()">
+    <input type="number" placeholder="Age (yr)" value="${d.age??""}" data-f="age" oninput="calc()">
+    <div class="sc p0" data-f="score">—</div>
+    <button class="del" onclick="this.parentElement.remove();calc()" title="Remove">×</button>`;
+  $("compList").appendChild(el); calc();
+}
+function addEU(d){
+  d = d||{};
+  const el = document.createElement("div");
+  el.className="item eu";
+  el.innerHTML = `
+    <input type="text" placeholder="End user / equipment" value="${d.name||""}" data-f="name">
+    <input type="number" placeholder="Tolerated blend limit (%)" value="${d.limit??""}" data-f="limit" oninput="calc()">
+    <div class="sc p0" data-f="score">—</div>
+    <button class="del" onclick="this.parentElement.remove();calc()" title="Remove">×</button>`;
+  $("euList").appendChild(el); calc();
+}
+function readItems(listId){
+  return [...$(listId).children].map(el=>{
+    const o={el};
+    el.querySelectorAll("[data-f]").forEach(f=>{
+      if(f.dataset.f==="score") return;
+      o[f.dataset.f] = (f.value==="" ? null : (f.type==="number" ? parseFloat(f.value) : f.value));
+    });
+    return o;
+  });
+}
+function pcls(s){ return s===null?"p0":"p"+Math.max(1,Math.min(5,Math.round(s))); }
+function setSc(item, s){
+  const d = item.el.querySelector('[data-f="score"]');
+  d.textContent = s===null ? "—" : s.toFixed(1);
+  d.className = "sc " + pcls(s);
+}
+
+/* ============================================================
+   MAIN CALCULATION
+   ============================================================ */
+let LAST = null;
+
+function calc(){
+  const S = {};       // parameter scores
+  const D = {};       // detail / reason strings
+  const missing = [];
+
+  /* --- 1 Material --- */
+  {
+    const g = $("steelGrade").value, p = $("peGrade").value;
+    const sSteel = g ? STEEL[g] : null, sPE = p ? PE[p] : null;
+    let s=null, txt="";
+    if(modes.mat==="steel"){ s=sSteel; txt = g ? STEEL_LBL[g] : ""; }
+    else if(modes.mat==="pe"){ s=sPE; txt = p||""; }
+    else if(sSteel!==null && sPE!==null){ s=Math.min(sSteel,sPE); txt = STEEL_LBL[g]+" + "+p+" (governing: "+(sSteel<=sPE?STEEL_LBL[g]:p)+")"; }
+    S.mat = s;
+    D.mat = s===null ? "Material grade not entered." :
+      txt + " → " + s.toFixed(1) + (s>=4 ? " — low susceptibility to hydrogen embrittlement / permeation."
+        : s===3 ? " — moderate resistance; monitoring required above ~50 bar H₂ partial pressure."
+        : " — high-strength / high-permeability material, susceptible to hydrogen damage.");
+    $("steelHint").textContent = g==="GRB" ? "Gr. B is not tabulated in Table 4; scored 5 on toughness logic but flagged — Table 22 preliminary screening marks Gr. B as not compatible." : "";
+  }
+
+  /* --- 2 Weld --- */
+  {
+    let s=null, txt="";
+    if(modes.weld==="primary"){
+      const h = band(num("hv"), HV_B), f = band(num("flaw"), FLAW_B);
+      pill("s-hv", h, num("hv")===null?"":"hardness score");
+      pill("s-flaw", f, num("flaw")===null?"":"flaw density score");
+      if(h!==null && f!==null){ s = 0.5*h + 0.5*f; txt = `HV ${num("hv")} → ${h}; flaw density ${num("flaw")}% → ${f}; equal weighting → ${s.toFixed(2)}`; }
+    } else {
+      const a = $("accCode").value ? parseFloat($("accCode").value) : null;
+      const n = band(num("ndt"), NDT_B);
+      pill("s-ndt", n, num("ndt")===null?"":"NDT sampling score");
+      if(a!==null && n!==null){ s = 0.5*a + 0.5*n; txt = `Acceptance code ${a}; sampled defect rate ${num("ndt")}% → ${n}; (0.5/0.5) → ${s.toFixed(2)}`; }
+    }
+    S.weld = s;
+    D.weld = s===null ? "Weld data not entered." :
+      txt + (s>=4 ? " — girth welds within hydrogen-tolerant hardness/flaw envelope."
+           : " — weld condition is a limiting factor for hydrogen-induced cracking resistance.");
+  }
+
+  /* --- 3 Component readiness --- */
+  {
+    const valves = readItems("valveList"), comps = readItems("compList");
+    let scores=[], worst=null, worstName="", oemLimits=[];
+    valves.forEach(v=>{
+      const b = v.body?VBODY[v.body]:null, a = band(v.age, VAGE_B);
+      const sc = (b===null||a===null) ? null : Math.min(b,a);
+      setSc(v, sc);
+      if(sc!==null){ scores.push(sc); if(worst===null||sc<worst){worst=sc; worstName=(v.tag||"valve")+" ("+(b<=a?VBODY_LBL[v.body]:v.age+" yr")+")";} }
+    });
+    comps.forEach(c=>{
+      const b = band(c.blend, BLEND_B), a = band(c.age, VAGE_B);
+      const sc = (b===null||a===null) ? null : Math.min(b,a);
+      setSc(c, sc);
+      if(c.blend!==null) oemLimits.push({name:c.tag||"compressor", lim:c.blend});
+      if(sc!==null){ scores.push(sc); if(worst===null||sc<worst){worst=sc; worstName=(c.tag||"compressor")+" ("+(b<=a?c.blend+"% OEM limit":c.age+" yr")+")";} }
+    });
+    S.comp = scores.length ? Math.min(...scores) : null;
+    D.comp = S.comp===null ? "No valve or compressor data entered."
+      : `Governed by ${worstName} → ${S.comp.toFixed(1)} (minimum of ${scores.length} component${scores.length>1?"s":""}).`
+        + (S.comp>=4 ? " Components are admissible for blend service subject to OEM confirmation." : " This component must be upgraded, replaced or OEM-requalified.");
+    D._oem = oemLimits;
+  }
+
+  /* --- 4 End use --- */
+  {
+    const eus = readItems("euList");
+    let scores=[], worst=null, worstName="", limits=[];
+    eus.forEach(e=>{
+      const sc = band(e.limit, EU_B);
+      setSc(e, sc);
+      if(e.limit!==null) limits.push({name:e.name||"end user", lim:e.limit});
+      if(sc!==null){ scores.push(sc); if(worst===null||sc<worst){worst=sc; worstName=(e.name||"end user")+" @ "+e.limit+"%";} }
+    });
+    S.eu = scores.length ? Math.min(...scores) : null;
+    D.eu = S.eu===null ? "No downstream equipment entered."
+      : `Least tolerant load: ${worstName} → ${S.eu.toFixed(1)}.`
+        + (S.eu>=4 ? " Downstream fleet accepts blends above 5%." : " Downstream tolerance caps the achievable blend well below pilot targets.");
+    D._eu = limits;
+  }
+
+  /* --- 5 Age --- */
+  {
+    const a = num("age");
+    S.age = band(a, AGE_B);
+    D.age = S.age===null ? "Pipeline age not entered."
+      : `${a} years in service → ${S.age.toFixed(1)}.` + (S.age>=4 ? " Within the ≤20-year vintage band favoured for blending candidates." : " Vintage asset — accumulated degradation raises hydrogen risk.");
+  }
+
+  /* --- 6 Gas loss --- */
+  {
+    const l = num("loss");
+    S.loss = band(l, LOSS_B);
+    pill("s-loss", S.loss, l===null?"":"gas loss score");
+    D.loss = S.loss===null ? "Gas loss not entered."
+      : `${l}% loss → ${S.loss.toFixed(1)}.` + (S.loss>=4 ? " Tight system; hydrogen's higher diffusivity is manageable." : " Existing leakage will be amplified by hydrogen — leak survey and repair needed first.");
+  }
+
+  /* --- 7 Class location --- */
+  {
+    const L = [num("L1")||0, num("L2")||0, num("L3")||0, num("L4")||0];
+    const tot = L.reduce((a,b)=>a+b,0);
+    S.loc = tot>0 ? (L[0]*5 + L[1]*3 + L[2]*2 + L[3]*1)/tot : null;
+    D._hca = (L[2]+L[3])>0;
+    D._hcaKm = L[2]+L[3];
+    D._locLen = tot;
+    $("s-loc").innerHTML = tot>0
+      ? `<span class="pill ${pcls(S.loc)}">${S.loc.toFixed(2)}</span><span>length-weighted over ${tot.toFixed(2)} km — Class 3+4 exposure ${(L[2]+L[3]).toFixed(2)} km (${(100*(L[2]+L[3])/tot).toFixed(0)}%)</span>`
+      : "";
+    D.loc = S.loc===null ? "Class location lengths not entered."
+      : `Length-weighted ${S.loc.toFixed(2)} over ${tot.toFixed(2)} km.` + (S.loc>=4 ? " Predominantly Class 1 routing — low consequence exposure." : ` ${(L[2]+L[3]).toFixed(2)} km in Class 3/4 raises consequence severity above the screening threshold.`);
+  }
+
+  /* --- 8 Corrosion --- */
+  {
+    const r = num("corrRate"), t = num("rtr");
+    const sr = band(r, CORR_B), st = rtrScore(t);
+    pill("s-cr", sr, r===null?"":"corrosion rate score");
+    pill("s-rtr", st, t===null?"":"residual thickness score");
+    S.corr = (sr===null||st===null) ? null : 0.5*sr + 0.5*st;
+    D._rtr = t;
+    D.corr = S.corr===null ? "Corrosion data not entered."
+      : `Rate ${r} mm/yr → ${sr}; RTR ${t} → ${st}; equal weighting → ${S.corr.toFixed(2)}.`
+        + (S.corr>=4 ? " Wall condition and corrosion control are adequate for blend service." : " Wall loss / active corrosion must be remediated before hydrogen introduction.");
+  }
+
+  /* --- 9 Capacity & MAOP --- */
+  {
+    const c = num("cap"), o = num("opm");
+    const sc = band(c, CAP_B), so = band(o, OPM_B);
+    pill("s-cap", sc, c===null?"":"capacity score");
+    pill("s-opm", so, o===null?"":"pressure buffer score");
+    S.cap = (sc===null||so===null) ? null : 0.5*sc + 0.5*so;
+    D.cap = S.cap===null ? "Capacity / MAOP data not entered."
+      : `Utilisation ${c}% → ${sc}; operating at ${o}% of MAOP → ${so}; equal weighting → ${S.cap.toFixed(2)}.`
+        + (S.cap>=4 ? " Adequate throughput headroom and pressure margin to absorb a blend." : " Little headroom — blending would erode the flow and pressure margin.");
+  }
+
+  /* --- aggregate --- */
+  let total=0, complete=true;
+  for(const k in WEIGHTS){
+    if(S[k]===null){ complete=false; missing.push(PNAMES[k]); }
+    else total += S[k]*WEIGHTS[k];
+  }
+  const failed = Object.keys(WEIGHTS).filter(k=>S[k]!==null && S[k] < GATE);
+  LAST = {S, D, total, complete, failed, missing};
+  render(S, D, total, complete, failed, missing);
+}
+
+function pill(id, s, label){
+  const el = $(id);
+  if(!el) return;
+  el.innerHTML = (s===null) ? "" : `<span class="pill ${pcls(s)}">${s.toFixed(1)}</span><span>${label}</span>`;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(S, D, total, complete, failed, missing){
+  // mini scores in headers
+  const map={mat:"m-mat",weld:"m-weld",comp:"m-comp",eu:"m-eu",age:"m-age",loss:"m-loss",loc:"m-loc",corr:"m-corr",cap:"m-cap"};
+  for(const k in map){
+    const el=$(map[k]);
+    el.textContent = S[k]===null ? "—" : S[k].toFixed(2);
+    el.style.color = S[k]===null ? "var(--muted)" : (S[k]>=4 ? "var(--good)" : S[k]>=3 ? "#8a6100" : "var(--critical)");
+  }
+
+  // breakdown table
+  const rows = Object.keys(WEIGHTS).map(k=>{
+    const s=S[k], w=WEIGHTS[k];
+    const col = s===null?"var(--axis)": s>=4.5?"#0ca30c": s>=4?"#178a4c": s>=3?"#fab219": s>=2?"#ec835a":"#d03b3b";
+    return `<tr>
+      <td>${PNAMES[k]}</td>
+      <td class="n" style="font-weight:650">${s===null?"—":s.toFixed(2)}</td>
+      <td><div class="meter"><i style="width:${s===null?0:(s/5*100)}%;background:${col}"></i></div></td>
+      <td class="n">${(w*100).toFixed(0)}%</td>
+      <td class="n">${s===null?"—":(s*w).toFixed(3)}</td>
+      <td class="n">${s===null?'<span style="color:var(--muted)">—</span>': (s>=GATE?'<span class="gateok">✓</span>':'<span class="gatebad">✕</span>')}</td>
+    </tr>`;
+  }).join("");
+  $("bdBody").innerHTML = rows;
+  $("bdTotal").textContent = complete ? total.toFixed(3) : total.toFixed(3)+" *";
+
+  // headline stats
+  $("totalScore").innerHTML = (complete? total.toFixed(2) : "—") + "<small> / 5.00</small>";
+  const r = rating(total);
+  $("ratingTxt").textContent = complete ? r.label + " band (Table 20)" : "incomplete — " + missing.length + " parameter(s) missing";
+  $("gateVal").innerHTML = complete
+    ? (failed.length===0 ? '<span style="color:var(--good)">PASS</span>' : '<span style="color:var(--critical)">FAIL</span>')
+    : "—";
+  $("gateTxt").textContent = complete
+    ? (failed.length===0 ? "all nine parameters ≥ 4.00" : failed.length + " parameter(s) below 4.00")
+    : "every parameter must be ≥ 4.00";
+
+  // verdict
+  const v=$("verdict");
+  v.className = "verdict";
+  if(!complete){
+    v.classList.add("v-idle");
+    $("vMain").textContent = "Incomplete";
+    $("vSub").textContent = "Missing: " + missing.join(", ") + ".";
+  } else if(failed.length){
+    v.classList.add("v-gate");
+    $("vMain").innerHTML = "✕ Not suitable as-is";
+    $("vSub").textContent = "Fails the B.1 minimum-score gate on " + failed.map(k=>PNAMES[k]).join(", ")
+      + ". A minimum of 4 must be met individually for each parameter, not merely as an overall average.";
+  } else {
+    v.classList.add("v-"+r.key);
+    $("vMain").innerHTML = (r.key==="excellent"||r.key==="good" ? "✓ " : "◐ ") + "Suitable — " + r.label;
+    $("vSub").textContent = r.action;
+  }
+
+  // reasons
+  const order = ["mat","weld","comp","eu","age","loss","loc","corr","cap"];
+  $("reasons").innerHTML = order.map(k=>{
+    const s=S[k];
+    const ic = s===null ? '<span class="ic">·</span>' : (s>=GATE ? '<span class="ic ok">✓</span>' : '<span class="ic bad">✕</span>');
+    return `<li>${ic}<span><strong>${PNAMES[k]}</strong> — ${D[k]}</span></li>`;
+  }).join("");
+
+  // red flags — B.1 "Module at a glance" snapshot
+  const flags=[];
+  const g=$("steelGrade").value;
+  if(g==="X70"||g==="X80") flags.push(["bad","High-strength steel (X70+) — the module lists this as a red flag; hydrogen embrittlement mitigation or retro-fitment is required."]);
+  if(g==="GRB") flags.push(["warn","API 5L Gr. B is not tabulated in Table 4 and is marked not compatible in the Table 22 preliminary screening. Verify mill certificates and vintage before accepting a score of 5."]);
+  if(S.weld!==null && S.weld<4) flags.push(["bad","Poor weld data / weld condition — listed red flag."]);
+  if(modes.weld==="alt") flags.push(["warn","Alternate weld route in use: individual weld traceability is unavailable, so the weld score rests on code compliance and sampling rather than measured girth-weld condition."]);
+  if(S.loss!==null && S.loss<4) flags.push(["bad","High gas loss — listed red flag; hydrogen will amplify existing leakage."]);
+  if(D._hca) flags.push([S.loc!==null&&S.loc<4?"bad":"warn", `HCA exposure — ${D._hcaKm.toFixed(2)} km of the section is Class 3/4. Field validation of location class is required before pilot approval.`]);
+  if(D._rtr!==null && D._rtr!==undefined && !isNaN(D._rtr) && D._rtr<0.9) flags.push(["bad","Residual thickness ratio below 0.90 — listed red flag (corrosion RPR < 0.9)."]);
+  if(!flags.length) flags.push(["ok","No B.1 red flags triggered on the data entered."]);
+  $("redflags").innerHTML = flags.map(([t,txt])=>`<li><span class="ic ${t}">${t==="bad"?"✕":t==="warn"?"!":"✓"}</span><span>${txt}</span></li>`).join("");
+
+  // governing blend limit + actions
+  const lims = [...(D._oem||[]).map(o=>({...o,src:"OEM compressor rating"})), ...(D._eu||[]).map(o=>({...o,src:"end-use tolerance"}))];
+  let html="";
+  if(lims.length){
+    const gov = lims.reduce((a,b)=> b.lim<a.lim ? b : a);
+    html += `<div style="background:var(--plane);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">Governing H₂ blend limit</div>
+      <div style="font-size:22px;font-weight:700;letter-spacing:-.02em">${gov.lim}% <span style="font-size:12px;font-weight:500;color:var(--text-secondary)">by volume</span></div>
+      <div style="font-size:12px;color:var(--text-secondary)">Set by <strong>${gov.name}</strong> (${gov.src}). Individual blending limits shall be strictly respected during all blending operations.</div>
+    </div>`;
+  } else {
+    html += `<p style="color:var(--muted);margin:0 0 10px">Enter compressor OEM ratings and end-use tolerances to derive the governing blend limit.</p>`;
+  }
+  const acts=[];
+  if(complete && failed.length){
+    failed.forEach(k=> acts.push(`Raise <strong>${PNAMES[k]}</strong> to ≥ 4.00 — currently ${S[k].toFixed(2)}. ${remedy(k)}`));
+    acts.push("Re-screen the section after remediation. Until every parameter clears 4.00, the section is not a candidate for pilot blending regardless of the weighted total.");
+  } else if(complete){
+    acts.push(r_action(total));
+    acts.push("Register the segment in the national Installed-Base Readiness Registry with component OEM blend limits, and pass the data pack to B.4 (pilot selection), B.2 (acceptance standards) and B.8 (deblending offshoot nodes).");
+  }
+  if(acts.length) html += "<ol style='padding-left:18px;margin:0'>"+acts.map(a=>`<li style="margin-bottom:6px">${a}</li>`).join("")+"</ol>";
+  $("actions").innerHTML = html;
+}
+function r_action(total){
+  const r = rating(total);
+  if(r.key==="excellent") return "Rated <strong>Excellent</strong> — prioritise for pilot blending without retrofitting.";
+  if(r.key==="good") return "Rated <strong>Good</strong> — prioritise for pilot blending; complete the identified minor retro-fitment first.";
+  if(r.key==="fair") return "Rated <strong>Fair</strong> — schedule targeted upgrades (moderate retro-fitment) before blending.";
+  return "Rated <strong>Marginal</strong> — extensive mitigation required; treat as a second-tier candidate.";
+}
+function remedy(k){
+  return ({
+    mat:"Grade is fixed for an existing line — this generally means section replacement or exclusion rather than repair.",
+    weld:"Recover girth-weld records, run PAUT sampling, and cut out / re-weld hard or flawed joints (target ≤250 HV).",
+    comp:"Replace or OEM-requalify the governing valve or compressor for hydrogen blend service.",
+    eu:"Requalify or replace the least tolerant downstream equipment, or reduce the blend to its limit.",
+    age:"Vintage cannot be changed — offset with enhanced inspection and a fitness-for-service assessment, or select an alternative section.",
+    loss:"Run a leak survey, repair fittings and seals, and re-measure UFG before re-screening.",
+    loc:"Re-route, re-section to exclude Class 3/4 stretches, or apply enhanced safety measures and field-validate the class.",
+    corr:"Remediate active corrosion (CP review, coating repair), and re-run ILI to confirm rate and residual thickness.",
+    cap:"De-rate flow or reduce operating pressure to open up throughput and MAOP margin."
+  })[k] || "";
+}
+
+/* ============================================================
+   IO
+   ============================================================ */
+function collect(){
+  return {
+    meta:{op:$("op").value, plname:$("plname").value, secid:$("secid").value,
+          chFrom:$("chFrom").value, chTo:$("chTo").value, dia:$("dia").value, systype:$("systype").value},
+    modes:{...modes},
+    mat:{steelGrade:$("steelGrade").value, peGrade:$("peGrade").value},
+    weld:{hv:$("hv").value, flaw:$("flaw").value, accCode:$("accCode").value, ndt:$("ndt").value},
+    valves: readItems("valveList").map(v=>({tag:v.tag,body:v.body,age:v.age})),
+    comps:  readItems("compList").map(c=>({tag:c.tag,blend:c.blend,age:c.age})),
+    eus:    readItems("euList").map(e=>({name:e.name,limit:e.limit})),
+    age:$("age").value, commYr:$("commYr").value, loss:$("loss").value,
+    loc:{L1:$("L1").value,L2:$("L2").value,L3:$("L3").value,L4:$("L4").value},
+    corr:{corrRate:$("corrRate").value, rtr:$("rtr").value},
+    cap:{cap:$("cap").value, opm:$("opm").value, maop:$("maop").value, oppr:$("oppr").value}
+  };
+}
+function apply(d){
+  resetAll(true);
+  const m=d.meta||{}; ["op","plname","secid","chFrom","chTo","dia","systype"].forEach(k=>{ if($(k)&&m[k]!==undefined) $(k).value=m[k]; });
+  if(d.modes){
+    [...$("seg-mat").children].forEach(b=>{ if(b.dataset.v===d.modes.mat) segSet("mat",b); });
+    [...$("seg-weld").children].forEach(b=>{ if(b.dataset.v===d.modes.weld) segSet("weld",b); });
+  }
+  $("steelGrade").value=d.mat?.steelGrade||""; $("peGrade").value=d.mat?.peGrade||"";
+  ["hv","flaw","accCode","ndt"].forEach(k=>{ if(d.weld&&d.weld[k]!==undefined) $(k).value=d.weld[k]; });
+  (d.valves||[]).forEach(addValve); (d.comps||[]).forEach(addComp); (d.eus||[]).forEach(addEU);
+  $("age").value=d.age||""; $("commYr").value=d.commYr||""; $("loss").value=d.loss||"";
+  ["L1","L2","L3","L4"].forEach(k=>{ if(d.loc&&d.loc[k]!==undefined) $(k).value=d.loc[k]; });
+  ["corrRate","rtr"].forEach(k=>{ if(d.corr&&d.corr[k]!==undefined) $(k).value=d.corr[k]; });
+  ["cap","opm","maop","oppr"].forEach(k=>{ if(d.cap&&d.cap[k]!==undefined) $(k).value=d.cap[k]; });
+  calc();
+}
+function saveJSON(){
+  const blob = new Blob([JSON.stringify(collect(),null,2)],{type:"application/json"});
+  dl(blob, ($("secid").value||"segment")+"_B1_inputs.json");
+}
+function loadJSON(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=e=>{ try{ apply(JSON.parse(e.target.result)); }catch(err){ alert("Could not read that file: "+err.message); } };
+  rd.readAsText(f); ev.target.value="";
+}
+function exportCSV(){
+  if(!LAST) return;
+  const {S,total,complete,failed} = LAST;
+  const r = rating(total);
+  const head=["Operator","Pipeline","Section","From_km","To_km","Size_in","System",
+    ...Object.keys(WEIGHTS).map(k=>PNAMES[k].replace(/,/g,"")),
+    "Total_Score","Rating","Gate_Pass","Failed_Parameters","Action"];
+  const row=[$("op").value,$("plname").value,$("secid").value,$("chFrom").value,$("chTo").value,$("dia").value,$("systype").value,
+    ...Object.keys(WEIGHTS).map(k=>S[k]===null?"":S[k].toFixed(2)),
+    complete?total.toFixed(3):"", complete?r.label:"INCOMPLETE",
+    complete?(failed.length?"FAIL":"PASS"):"", failed.map(k=>PNAMES[k]).join("; "),
+    complete?(failed.length?"Not suitable as-is — fails minimum-score gate":r.action):""];
+  const csv=[head,row].map(a=>a.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  dl(new Blob([csv],{type:"text/csv"}), ($("secid").value||"segment")+"_B1_result.csv");
+}
+function dl(blob,name){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function resetAll(silent){
+  document.querySelectorAll("input[type=number],input[type=text]").forEach(i=>i.value="");
+  document.querySelectorAll("select").forEach(s=>{ if(s.id!=="systype") s.value=""; });
+  $("valveList").innerHTML=""; $("compList").innerHTML=""; $("euList").innerHTML="";
+  if(!silent) calc();
+}
+function loadExample(){
+  apply({
+    meta:{op:"GSPC", plname:"Sanand GIDC Connectivity", secid:"SEC-02/A", chFrom:"0.00", chTo:"4.50", dia:"8", systype:"NGPL"},
+    modes:{mat:"steel", weld:"primary"},
+    mat:{steelGrade:"X42", peGrade:""},
+    weld:{hv:"212", flaw:"0.8", accCode:"", ndt:""},
+    valves:[{tag:"SV-101", body:"ss316", age:6},{tag:"BV-104", body:"ss316", age:4}],
+    comps:[{tag:"CS-01 K-101", blend:12, age:7}],
+    eus:[{name:"Industrial burner — GACL", limit:12},{name:"Boiler house", limit:15}],
+    age:"9", commYr:"", loss:"0.22",
+    loc:{L1:"4.10", L2:"0.40", L3:"0", L4:"0"},
+    corr:{corrRate:"0.12", rtr:"0.97"},
+    cap:{cap:"86", opm:"58", maop:"", oppr:""}
+  });
+}
+function toggleTheme(){
+  const d = document.documentElement.dataset.theme==="dark";
+  document.documentElement.dataset.theme = d?"light":"dark";
+  $("themeBtn").textContent = d?"Dark":"Light";
+}
+
+/* ---------- reference tables ---------- */
+function refTable(title, head, rows){
+  return `<h4 class="rt">${title}</h4><table class="ref"><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>`
+    + rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i===r.length-1?"n":""}">${c}</td>`).join("")}</tr>`).join("")
+    + `</tbody></table>`;
+}
+$("refTables").innerHTML =
+  refTable("Table 19 — Weightings", ["Parameter","Weight"], Object.keys(WEIGHTS).map(k=>[PNAMES[k],(WEIGHTS[k]*100).toFixed(0)+"%"]))
++ refTable("Table 20 — Evaluation", ["Total score","Rating","Action"],
+    [["≥ 4.50","Excellent","Blending without retro-fitment may be possible"],
+     ["4.40 – 4.50","Good","Blending possible with minor retro-fitment"],
+     ["4.20 – 4.40","Fair","Moderate retro-fitment required before blending"],
+     ["4.00 – 4.20","Marginal","Extensive mitigation required before blending"],
+     ["< 4.00","Poor","Rejection for blending"]])
++ `<p style="margin:-6px 0 14px;font-size:12px;color:var(--text-secondary)"><strong>Gate:</strong> a minimum score of 4 must be met individually for each parameter, not merely as an overall average.</p>`
++ refTable("Table 4 — Steel grade", ["Grade","Score"], [["API 5L X42–X52 (below X52)","5"],["API 5L X52–X60","4"],["API 5L X60–X70","3"],["API 5L X70–X80","2"],["API 5L X80 and higher","1"]])
++ refTable("Table 5 — PE grade", ["Grade","Score"], [["PE100","5"],["PE80","4"],["PE63","2"]])
++ refTable("Table 6 — Weld hardness", ["Hardness (HV)","Score"], [["≤ 200","5"],["201–230","4"],["231–250","3"],["251–280","2"],["> 280","1"]])
++ refTable("Table 7 — Weld flaw density", ["Flaw density (%)","Score"], [["≤ 1","5"],["> 1–2","4"],["> 2–3","3"],["> 3–5","2"],["> 5","1"]])
++ refTable("Table 8 — Valve body material", ["Material","Score"], [["Austenitic stainless steel (e.g. 316L)","5"],["Duplex stainless steel","3"],["Carbon steel and aluminium alloys","1"]])
++ refTable("Tables 9 & 11 — Valve / compressor age", ["Age (years)","Score"], [["< 5","5"],["5–10","4"],["10–15","3"],["15–20","2"],["> 20","1"]])
++ refTable("Table 10 — Compressor OEM blend limit", ["Blend %","Score"], [["Up to 2%","1"],["2–5%","2"],["5–10%","3"],["10–15%","4"],["15–20%","5"]])
++ refTable("Table 12 — End-use compatibility", ["Blend limit (%)","Score"], [["Up to 1%","1"],["Up to 3%","2"],["3–5%","3"],["5–10%","4"],["More than 10%","5"]])
++ refTable("Table 13 — Pipeline age", ["Age (years)","Score"], [["< 10","5"],["10–20","4"],["20–30","3"],["30–40","2"],["> 40","1"]])
++ refTable("Table 14 — Gas losses", ["Gas loss (%)","Score"], [["< 0.1","5"],["0.1–0.4","4"],["0.4–0.6","3"],["0.6–1.0","2"],["> 1.0","1"]])
++ refTable("Table 15 — Class of location", ["Class","Score"], [["1 — rural, very low density","5"],["2 — suburban, moderate density","3"],["3 — urban, high density","2"],["4 — HCA / critical infrastructure","1"]])
++ refTable("Table 16 — Corrosion rate", ["Rate (mm/year)","Score"], [["0.1–0.2","5"],["0.2–0.4","4"],["0.4–0.6","3"],["0.6–1.0","2"],["> 1.0","1"]])
++ refTable("Table 17 — Residual thickness ratio", ["RTR","Score"], [["> 0.95","5"],["0.90–0.95","4"],["0.80–0.90","3"],["0.70–0.80","2"],["< 0.70","1"]])
++ refTable("Table 18 — Capacity utilisation", ["Utilisation (%)","Score"], [["> 98.5","1"],["96.5–98.5","2"],["93–96.5","3"],["90–93","4"],["87–90","5"]])
++ refTable("Table 18 — Operating pressure vs MAOP", ["OP as % of MAOP","Score"], [["> 90","1"],["70–90","2"],["50–70","3"],["30–50","4"],["< 30","5"]])
++ refTable("Alternate weld route — Matrix A", ["Compliance level","Score"], [["Fully compliant with ASME/API standards","5"],["Minor deviations, documented repairs","4"],["Compliant with legacy codes, no recent validation","3"],["Partial compliance, limited documentation","2"],["Non-compliant or undocumented","1"]])
++ refTable("Alternate weld route — Matrix B", ["Defect rate in sampled welds (%)","Score"], [["≤ 1","5"],["> 1–2","4"],["> 2–3","3"],["> 3–5","2"],["> 5","1"]]);
+
+/* init */
+addValve(); addComp(); addEU();
+calc();
+</script>
+</body>
+</html>
