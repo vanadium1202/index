@@ -16,7 +16,7 @@ python run_forecast.py --source csv --csv my_prices.csv --markets brent ttf   # 
 python run_forecast.py --source synthetic --quick                              # offline test
 ```
 
-Output goes to `outputs/`: `report.html` (open in a browser), `forecast.csv/json`,
+Output goes to `outputs/`: `oil_gas_price_forecast.xlsx` (summary table: 7/15-day forecast and % accuracy per market, with a Details sheet), `report.html` (open in a browser), `forecast.csv/json`,
 `backtest_metrics.csv` (full backtest), `backtest_metrics_last2y.csv`, and every daily backtest
 forecast (`backtest_<market>_<h>d.csv`) for your own checks. You can get a free EIA key at
 https://www.eia.gov/opendata/register.php. A full run takes about 2 minutes.

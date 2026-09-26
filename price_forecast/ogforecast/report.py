@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from .excel import write_excel_summary
 from .model import HorizonResult
 
 UNITS = {"brent": "$/bbl", "wti": "$/bbl", "henry_hub": "$/MMBtu"}
@@ -109,6 +110,7 @@ def write_outputs(df: pd.DataFrame, results: list[HorizonResult], out_dir: str, 
     out.mkdir(parents=True, exist_ok=True)
     fc = pd.DataFrame([{k: v for k, v in r.forecast.items() if k != "all_models_change_%"} for r in results])
     fc.to_csv(out / "forecast.csv", index=False)
+    write_excel_summary([r.forecast for r in results], out / "oil_gas_price_forecast.xlsx", source)
     (out / "forecast.json").write_text(json.dumps([r.forecast for r in results], indent=2, default=float))
     metrics = pd.concat(
         {(r.market, r.calendar_days): r.metrics for r in results}, names=["market", "horizon_days", "model"]
