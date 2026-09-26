@@ -4,6 +4,7 @@
 Examples
     python run_forecast.py                              # live FRED data (+EIA if EIA_API_KEY set)
     python run_forecast.py --eia-key YOUR_KEY           # adds futures curve + inventories
+    python run_forecast.py --source github              # EIA spot prices via GitHub mirror, no key
     python run_forecast.py --source csv --csv my.csv --markets brent ttf
     python run_forecast.py --source synthetic --quick   # offline pipeline test
 """
@@ -21,7 +22,7 @@ from ogforecast.report import write_outputs
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--source", choices=["live", "csv", "synthetic"], default="live")
+    ap.add_argument("--source", choices=["live", "github", "csv", "synthetic"], default="live")
     ap.add_argument("--csv", help="CSV file for --source csv")
     ap.add_argument("--eia-key", help="EIA API key (or set EIA_API_KEY)")
     ap.add_argument("--start", default="2005-01-01", help="first date of history to use")
@@ -40,6 +41,8 @@ def main() -> None:
     print(f"Loading data ({args.source}) ...")
     if args.source == "live":
         df = data.load_live(args.start, args.eia_key)
+    elif args.source == "github":
+        df = data.load_github(args.start)
     elif args.source == "csv":
         if not args.csv:
             ap.error("--source csv needs --csv PATH")

@@ -10,6 +10,7 @@ and the accuracy the same model achieved in an out-of-sample walk-forward backte
 pip install -r requirements.txt
 python run_forecast.py                         # live FRED data
 EIA_API_KEY=xxxx python run_forecast.py        # + futures curve & EIA inventories (recommended)
+python run_forecast.py --source github         # EIA spot prices via GitHub mirror (no key, prices only)
 python run_forecast.py --horizons 7 10 15      # any horizons, in calendar days
 python run_forecast.py --source csv --csv my_prices.csv --markets brent ttf   # your own data
 python run_forecast.py --source synthetic --quick                              # offline test

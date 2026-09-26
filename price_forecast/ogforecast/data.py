@@ -109,6 +109,24 @@ def load_live(start: str = "2005-01-01", eia_key: str | None = None, verbose: bo
     return to_business_days(pd.DataFrame(cols))
 
 
+GITHUB_MIRRORS = {
+    "brent": "https://raw.githubusercontent.com/datasets/oil-prices/main/data/brent-daily.csv",
+    "wti": "https://raw.githubusercontent.com/datasets/oil-prices/main/data/wti-daily.csv",
+    "henry_hub": "https://raw.githubusercontent.com/datasets/natural-gas/main/data/daily.csv",
+}
+
+
+def load_github(start: str = "2005-01-01") -> pd.DataFrame:
+    """EIA daily spot prices mirrored by github.com/datasets (no key; prices only, no drivers)."""
+    cols = {}
+    for name, url in GITHUB_MIRRORS.items():
+        resp = requests.get(url, timeout=_TIMEOUT)
+        resp.raise_for_status()
+        s = pd.read_csv(io.StringIO(resp.text), parse_dates=["Date"], index_col="Date")["Price"]
+        cols[name] = s.loc[start:]
+    return to_business_days(pd.DataFrame(cols))
+
+
 def load_csv(path: str) -> pd.DataFrame:
     """Load a user CSV: first column = date, other columns named as in the module docstring.
 
@@ -128,6 +146,8 @@ def to_business_days(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.sort_index()
     df = df[~df.index.duplicated(keep="last")]
+    # log-price models cannot use non-positive prints (e.g. WTI at -37.63 on 2020-04-20)
+    df = df.mask(df <= 0)
     idx = pd.bdate_range(df.index.min(), df.index.max())
     out = df.reindex(df.index.union(idx)).sort_index()
     limits = {c: 10 if c in WEEKLY_COLUMNS else 5 for c in out.columns}
