@@ -21,6 +21,21 @@ Output goes to `outputs/`: `oil_gas_price_forecast.xlsx` (summary table: 7/15-da
 forecast (`backtest_<market>_<h>d.csv`) for your own checks. You can get a free EIA key at
 https://www.eia.gov/opendata/register.php. A full run takes about 2 minutes.
 
+## Daily forecasts (GitHub Actions, no computer needed)
+
+`.github/workflows/daily_forecast.yml` runs the model every day at **06:45 IST** and on demand:
+
+- **Newest table:** `daily_forecasts/latest/oil_gas_price_forecast.xlsx` (open on github.com
+  or in the GitHub app → *View raw* / download).
+- **Earlier days:** `daily_forecasts/<date>/`; every forecast is also appended to
+  `daily_forecasts/history.csv`, so forecasts can later be checked against actual prices.
+- **On demand:** GitHub → *Actions* → *Daily oil & gas forecast* → *Run workflow*. After about
+  5 minutes the new table is in `daily_forecasts/latest/` and attached to the run as
+  `oil-gas-forecast`.
+- **Better data (optional):** add a free EIA key as repository secret `EIA_API_KEY`
+  (*Settings → Secrets and variables → Actions*) to include futures-curve and inventory drivers.
+  Without it the run uses FRED market drivers plus the latest EIA spot prices.
+
 ## Data (all free)
 
 | Driver | Series | Source | Why it matters at 1–3 weeks |

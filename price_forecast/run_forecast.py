@@ -5,6 +5,7 @@ Examples
     python run_forecast.py                              # live FRED data (+EIA if EIA_API_KEY set)
     python run_forecast.py --eia-key YOUR_KEY           # adds futures curve + inventories
     python run_forecast.py --source github              # EIA spot prices via GitHub mirror, no key
+    python run_forecast.py --source auto                # live if reachable, newest prices from either
     python run_forecast.py --source csv --csv my.csv --markets brent ttf
     python run_forecast.py --source synthetic --quick   # offline pipeline test
 """
@@ -22,7 +23,7 @@ from ogforecast.report import write_outputs
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--source", choices=["live", "github", "csv", "synthetic"], default="live")
+    ap.add_argument("--source", choices=["auto", "live", "github", "csv", "synthetic"], default="live")
     ap.add_argument("--csv", help="CSV file for --source csv")
     ap.add_argument("--eia-key", help="EIA API key (or set EIA_API_KEY)")
     ap.add_argument("--start", default="2005-01-01", help="first date of history to use")
@@ -39,7 +40,9 @@ def main() -> None:
         args.backtest_years, args.refit_every = 4, 126
 
     print(f"Loading data ({args.source}) ...")
-    if args.source == "live":
+    if args.source == "auto":
+        df = data.load_auto(args.start, args.eia_key)
+    elif args.source == "live":
         df = data.load_live(args.start, args.eia_key)
     elif args.source == "github":
         df = data.load_github(args.start)
@@ -49,6 +52,7 @@ def main() -> None:
         df = data.load_csv(args.csv)
     else:
         df = data.load_synthetic(args.start)
+    source_used = df.attrs.get("source", args.source)  # "auto" may fall back to one source
     df = df.loc[args.start:]
     print(f"  {len(df):,} business days, {df.index[0].date()} -> {df.index[-1].date()}, "
           f"{df.shape[1]} series: {', '.join(df.columns)}")
@@ -70,7 +74,7 @@ def main() -> None:
 
     if not results:
         raise SystemExit("Nothing to forecast.")
-    path = write_outputs(df, results, args.out, args.source)
+    path = write_outputs(df, results, args.out, source_used)
     print("\nBacktest accuracy (out-of-sample):")
     cols = ["MAPE_%", "within_5%", "direction_hit_%", "theil_U",
             "DM_pvalue_vs_RW", "coverage80_%", "coverage95_%"]

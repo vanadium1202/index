@@ -55,3 +55,23 @@ def test_run_market_outputs_consistent_forecast():
     assert 0 <= f["prob_up_%"] <= 100
     assert res.chosen in res.metrics.index
     assert 60 < res.metrics.loc["random_walk", "coverage80_%"] < 95
+
+
+def test_load_auto_extends_prices_and_keeps_drivers(monkeypatch):
+    from ogforecast import data
+
+    idx = pd.bdate_range("2024-01-01", periods=10)
+    live = pd.DataFrame({"brent": np.arange(10.0) + 80, "vix": 15.0}, index=idx)
+    live.iloc[-2:, 0] = np.nan  # FRED lags the mirror by two days
+    gh = pd.DataFrame({"brent": np.arange(10.0) + 80, "wti": 70.0}, index=idx)
+    monkeypatch.setattr(data, "load_live", lambda start, key=None: live.copy())
+    monkeypatch.setattr(data, "load_github", lambda start: gh.copy())
+    out = data.load_auto("2024-01-01")
+    assert out["brent"].iloc[-1] == 89.0 and out["vix"].notna().all() and "wti" in out
+    assert out.attrs["source"] == "auto"
+
+    def fail(*a, **k):
+        raise RuntimeError("blocked")
+
+    monkeypatch.setattr(data, "load_live", fail)
+    assert data.load_auto("2024-01-01").attrs["source"] == "github"

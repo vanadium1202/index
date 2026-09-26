@@ -127,6 +127,32 @@ def load_github(start: str = "2005-01-01") -> pd.DataFrame:
     return to_business_days(pd.DataFrame(cols))
 
 
+def load_auto(start: str = "2005-01-01", eia_key: str | None = None) -> pd.DataFrame:
+    """Best available data: FRED/EIA drivers, with spot prices extended to the latest date found
+    in either FRED or the GitHub mirror (both carry the same EIA spot series). Falls back to
+    the mirror alone if FRED is unreachable."""
+    try:
+        live = load_live(start, eia_key)
+    except Exception as exc:
+        print(f"  ! live data unavailable ({exc}); using GitHub mirror only")
+        gh = load_github(start)
+        gh.attrs["source"] = "github"
+        return gh
+    try:
+        gh = load_github(start)
+    except Exception as exc:
+        print(f"  ! GitHub mirror unavailable ({exc}); using live data only")
+        live.attrs["source"] = "live"
+        return live
+    idx = live.index.union(gh.index)
+    out = live.reindex(idx)
+    for col in gh.columns:
+        out[col] = out[col].combine_first(gh[col].reindex(idx)) if col in out else gh[col].reindex(idx)
+    out = to_business_days(out)
+    out.attrs["source"] = "auto"
+    return out
+
+
 def load_csv(path: str) -> pd.DataFrame:
     """Load a user CSV: first column = date, other columns named as in the module docstring.
 

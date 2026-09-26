@@ -1,0 +1,68 @@
+name: Daily oil & gas forecast
+
+on:
+  schedule:
+    - cron: "15 1 * * *"   # 01:15 UTC = 06:45 IST, every day
+  workflow_dispatch: {}    # "Run workflow" button: get a fresh table any time
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-forecast
+  cancel-in-progress: false
+
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: price_forecast/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r price_forecast/requirements.txt
+
+      - name: Run forecast model
+        working-directory: price_forecast
+        env:
+          # optional: add a free EIA key as repository secret EIA_API_KEY for curve + inventory data
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: python run_forecast.py --source auto --out ../out
+
+      - name: Store calculated values in the Excel file
+        # the model writes formulas; a LibreOffice round-trip saves their results so the numbers
+        # also show in phone/web previews. If this step fails the formula-only file is kept.
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libreoffice-calc-nogui
+          soffice --headless --calc --convert-to xlsx --outdir out/recalc out/oil_gas_price_forecast.xlsx
+          python - <<'PY'
+          import openpyxl
+          wb = openpyxl.load_workbook("out/recalc/oil_gas_price_forecast.xlsx", data_only=True)
+          assert wb["Sheet1"]["H16"].value is not None, "no calculated values"
+          PY
+          mv out/recalc/oil_gas_price_forecast.xlsx out/oil_gas_price_forecast.xlsx
+
+      - name: Save to daily_forecasts/
+        run: |
+          python price_forecast/save_daily.py out daily_forecasts
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add daily_forecasts
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git commit -m "Daily oil & gas forecast $(TZ=Asia/Kolkata date +%F)"
+          for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+
+      - name: Attach Excel to this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: oil-gas-forecast
+          path: out/oil_gas_price_forecast.xlsx
+          retention-days: 30

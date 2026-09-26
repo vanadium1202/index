@@ -37,6 +37,7 @@ DETAIL_COLS = [
 
 SOURCE_LABELS = {
     "live": "FRED / EIA APIs",
+    "auto": "FRED / EIA APIs + EIA spot prices (github.com/datasets mirror)",
     "github": "EIA daily spot prices (github.com/datasets mirror)",
     "csv": "user-supplied CSV",
     "synthetic": "SYNTHETIC test data - not real prices",
