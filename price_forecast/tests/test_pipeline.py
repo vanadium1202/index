@@ -75,3 +75,18 @@ def test_load_auto_extends_prices_and_keeps_drivers(monkeypatch):
 
     monkeypatch.setattr(data, "load_live", fail)
     assert data.load_auto("2024-01-01").attrs["source"] == "github"
+
+
+def test_prices_not_extended_past_last_observation():
+    """A driver series that runs longer must not drag the price series (and as-of date) forward."""
+    from ogforecast.data import to_business_days
+
+    idx = pd.bdate_range("2026-09-14", "2026-09-25")
+    df = pd.DataFrame({"brent": 100.0, "vix": 20.0, "crude_stocks": np.nan}, index=idx)
+    df.loc["2026-09-23":, "brent"] = np.nan   # prices published to the 22nd only
+    df.loc["2026-09-16", "brent"] = np.nan    # a holiday inside the series
+    df.loc["2026-09-16", "crude_stocks"] = 4.0e5
+    out = to_business_days(df)
+    assert out["brent"].last_valid_index() == pd.Timestamp("2026-09-22")
+    assert out.loc["2026-09-16", "brent"] == 100.0          # holiday gap still filled
+    assert out["crude_stocks"].last_valid_index() == pd.Timestamp("2026-09-25")  # weekly carries

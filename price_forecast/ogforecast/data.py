@@ -169,6 +169,10 @@ def to_business_days(df: pd.DataFrame) -> pd.DataFrame:
     """Align to a business-day calendar and forward-fill (holidays, weekly data).
 
     Forward-fill is limited so a dead series does not silently look like a flat market.
+    Daily series are only filled *between* real observations (holidays), never past their last
+    one: otherwise a price series would be extended to the last date of any other series and
+    the forecast would be anchored to a stale price with a wrong as-of date. Weekly series keep
+    their last release until the next one.
     """
     df = df.sort_index()
     df = df[~df.index.duplicated(keep="last")]
@@ -178,7 +182,8 @@ def to_business_days(df: pd.DataFrame) -> pd.DataFrame:
     out = df.reindex(df.index.union(idx)).sort_index()
     limits = {c: 10 if c in WEEKLY_COLUMNS else 5 for c in out.columns}
     for c, lim in limits.items():
-        out[c] = out[c].ffill(limit=lim)
+        area = None if c in WEEKLY_COLUMNS else "inside"
+        out[c] = out[c].ffill(limit=lim, limit_area=area)
     return out.reindex(idx)
 
 
