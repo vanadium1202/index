@@ -30,8 +30,17 @@ DETAIL_COLS = [
     ("Market", 12), ("Unit", 9), ("Horizon (days)", 9), ("As of", 11), ("Target date", 11),
     ("Last price", 10), ("Forecast", 10), ("Change %", 9), ("80% low", 9), ("80% high", 9),
     ("95% low", 9), ("95% high", 9), ("P(rise)", 8), ("Backtest mean abs. error", 11),
-    ("% accuracy", 10), ("Within ±5%", 9), ("80% range hit rate", 10), ("Model used", 22),
+    ("% accuracy", 10), ("Within ±5%", 9), ("80% range hit rate", 10),
+    ("80% range hit rate, last 2 yrs", 11), ("Model used", 22),
 ]
+
+
+SOURCE_LABELS = {
+    "live": "FRED / EIA APIs",
+    "github": "EIA daily spot prices (github.com/datasets mirror)",
+    "csv": "user-supplied CSV",
+    "synthetic": "SYNTHETIC test data - not real prices",
+}
 
 
 def write_excel_summary(forecasts: list[dict], path: Path, source: str) -> Path:
@@ -56,19 +65,20 @@ def write_excel_summary(forecasts: list[dict], path: Path, source: str) -> Path:
             pd.Timestamp(f["target_date"]).date(), f["last_price"], f["forecast_price"],
             f"=G{i}/F{i}-1", f["p10"], f["p90"], f["p2_5"], f["p97_5"], f["prob_up_%"] / 100,
             f["backtest_MAPE_%"] / 100, f"=1-N{i}", f["backtest_within_5%"] / 100,
-            f["backtest_coverage80_%"] / 100, MODEL_LABEL.get(f["model"], f["model"]),
+            f["backtest_coverage80_%"] / 100, f["last2y_coverage80_%"] / 100,
+            MODEL_LABEL.get(f["model"], f["model"]),
         ]
         fmts = ["@", "@", "0", "yyyy-mm-dd", "yyyy-mm-dd", "0.00", "0.00", "+0.0%;-0.0%;0.0%",
-                "0.00", "0.00", "0.00", "0.00", "0%", "0.0%", "0.0%", "0%", "0%", "@"]
+                "0.00", "0.00", "0.00", "0.00", "0%", "0.0%", "0.0%", "0%", "0%", "0%", "@"]
         for j, (v, fmt) in enumerate(zip(vals, fmts), start=1):
             c = det.cell(row=i, column=j, value=v)
             is_formula = isinstance(v, str) and v.startswith("=")
             c.font = BLACK if is_formula or j <= 5 else BLUE
             c.number_format, c.border = fmt, BOX
-            c.alignment = Alignment(horizontal="left" if j in (1, 2, 18) else "center")
+            c.alignment = Alignment(horizontal="left" if j in (1, 2, len(vals)) else "center")
     last = 1 + len(fc)
     notes = [
-        f"Data: {source}. Blue = model output (python run_forecast.py); black = formula.",
+        f"Data: {SOURCE_LABELS.get(source, source)}. Blue = model output (python run_forecast.py); black = formula.",
         "% accuracy = 1 - backtest mean absolute % error of the forecast price "
         "(8-year walk-forward, out-of-sample).",
         "80%/95% range: the actual price is expected inside it 80%/95% of the time; "

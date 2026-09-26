@@ -50,6 +50,7 @@ def build_features(df: pd.DataFrame, target: str) -> pd.DataFrame:
     f["vol_10"] = r.rolling(10).std() * np.sqrt(252)
     f["vol_21"] = r.rolling(21).std() * np.sqrt(252)
     f["vol_63"] = r.rolling(63).std() * np.sqrt(252)
+    f["vol_ewm10"] = np.sqrt((r**2).ewm(halflife=10).mean() * 252)  # reacts fastest to shocks
     f["vol_ratio"] = f["vol_10"] / f["vol_63"]
     f["gap_ma50"] = p - p.rolling(50).mean()
     f["gap_ma200"] = p - p.rolling(200).mean()
